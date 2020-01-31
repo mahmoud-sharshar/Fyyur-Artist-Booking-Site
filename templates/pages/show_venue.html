@@ -74,6 +74,18 @@
 		{% endfor %}
 	</div>
 </section>
+<button id="delete-btn" class="btn btn-primary btn-lg">Delete Venue</button>
 
+<script type="text/javascript">
+	deleteButton = document.getElementById('delete-btn');
+	venueId = {{ venue.id }} ;
+	deleteButton.onclick = function(){
+		console.log(venueId);
+		fetch('/venues/' + venueId,{
+			method: 'DELETE'
+		})
+		console.log('deleted');
+	}
+</script>
 {% endblock %}
 
