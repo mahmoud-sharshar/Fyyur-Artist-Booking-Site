@@ -74,8 +74,25 @@
 		{% endfor %}
 	</div>
 </section>
-<button id="delete-btn" class="btn btn-primary btn-lg">Delete Venue</button>
 
+<div class="row">
+
+	<form class="col-sm-6" action="/venues/edit" method="GET">
+		<input type="submit" value="Edit Venue" class="btn btn-primary btn-lg">
+		<input type='text' name="venue_id" value={{venue.id}} style="display: none;">
+	</form>
+
+	<form class="col-sm-6" action="/venues/delete" method="POST">
+		<input type="submit" value="Delete Venue" class="btn btn-primary btn-lg">
+		<input type='text' name="venue_id" value={{venue.id}} style="display: none;">
+	</form>
+
+</div>
+
+
+<!--<button id="delete-btn" class="btn btn-primary btn-lg">Delete Venue</button>-->
+
+<!-- try fetch request but doesn't work in rendering
 <script type="text/javascript">
 	deleteButton = document.getElementById('delete-btn');
 	venueId = {{ venue.id }} ;
@@ -83,9 +100,9 @@
 		console.log(venueId);
 		fetch('/venues/' + venueId,{
 			method: 'DELETE'
-		})
-		console.log('deleted');
+		});
 	}
 </script>
+-->
 {% endblock %}
 

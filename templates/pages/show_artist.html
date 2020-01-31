@@ -72,5 +72,16 @@
 	</div>
 </section>
 
+<div class="row">
+	<form class="col-sm-6" action="/artists/edit" method="GET">
+		<input type="submit" value="Edit artist" class="btn btn-primary btn-lg">
+		<input type='text' name="artist_id" value={{artist.id}} style="display: none;">
+	</form>
+
+	<form class="col-sm-6" action="/artists/delete" method="POST">
+		<input type="submit" value="Delete Artist" class="btn btn-primary btn-lg">
+		<input type='text' name="artist_id" value={{artist.id}} style="display: none;">
+	</form>
+</div>
 {% endblock %}
 

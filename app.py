@@ -48,7 +48,8 @@ class Venue(db.Model):
     seeking_description = db.Column(db.Text)
     upcoming_shows_count = db.Column(db.Integer, default=0)
     past_shows_count = db.Column(db.Integer, default=0)
-    shows = db.relationship('Show',backref='venue',lazy=True)
+    shows = db.relationship('Show',backref='venue',lazy=True,
+                        cascade="save-update, merge, delete")
 
 class Artist(db.Model):
     __tablename__ = 'Artist'
@@ -68,7 +69,8 @@ class Artist(db.Model):
     seeking_description = db.Column(db.Text)
     upcoming_shows_count = db.Column(db.Integer, default=0)
     past_shows_count = db.Column(db.Integer, default=0)
-    shows = db.relationship('Show',backref='artist',lazy=True)
+    shows = db.relationship('Show',backref='artist',lazy=True,
+                        cascade="save-update, merge, delete")
 
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
@@ -103,7 +105,9 @@ app.jinja_env.filters['datetime'] = format_datetime
 
 @app.route('/')
 def index():
-  return render_template('pages/home.html')
+  recentVenues = Venue.query.order_by(db.desc(Venue.id)).limit(10).all()
+  recentArtists = Artist.query.order_by(db.desc(Artist.id)).limit(10).all()
+  return render_template('pages/home.html',venues = recentVenues, artists = recentArtists)
 
 
 #  Venues
@@ -187,8 +191,8 @@ def show_venue(venue_id):
     "image_link": venue.image_link,
     "past_shows": past_shows,
     "upcoming_shows": upcoming_shows,
-    "past_shows_count": venue.past_shows_count,
-    "upcoming_shows_count": venue.upcoming_shows_count,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows)
   }
   return render_template('pages/show_venue.html', venue=data)
 
@@ -213,7 +217,7 @@ def create_venue_submission():
   new_venue.facebook_link = request.form['facebook_link']
   new_venue.genres = request.form['genres']
   new_venue.website = request.form['website']
-  #new_venue.image_link = request.form['image_link']
+  new_venue.image_link = request.form['image_link']
   try:
     db.session.add(new_venue)
     db.session.commit()
@@ -226,41 +230,29 @@ def create_venue_submission():
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   finally:
     db.session.close()
-  return render_template('pages/home.html')
+  return redirect(url_for('index'))
 
-@app.route('/venues/<venue_id>', methods=['DELETE'])
-def delete_venue(venue_id):
+#  delete Venue
+#  ----------------------------------------------------------------
+@app.route('/venues/delete', methods=['POST'])
+def delete_venue():
   # TODO: Complete this endpoint for taking a venue_id, and using
   # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
-  f = open('file.txt','a')
-  f.write('entered  ' + venue_id)
-  f.close()
+  venue_id = request.form.get('venue_id')
   deleted_venue = Venue.query.get(venue_id)
   venueName = deleted_venue.name
-  f = open('file.txt','a')
-  f.write(venueName)
-  f.close()
   try:
     db.session.delete(deleted_venue)
     db.session.commit()
-    f = open('file.txt','a')
-    f.write('  commited')
-    f.close()
     flash('Venue ' + venueName + ' was successfully deleted!')
   except:
     db.session.rollback()
-    f = open('file.txt','a')
-    f.write('   rolled')
-    f.close()
     flash('please try again. Venue ' + venueName + ' could not be deleted.')
   finally:
-    f = open('file.txt','a')
-    f.write('   Closed')
-    f.close()
     db.session.close()
   # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
   # clicking that button delete it from the db then redirect the user to the homepage
-  return jsonify({ 'success': True })
+  return redirect(url_for('index'))
 
 #  Artists
 #  ----------------------------------------------------------------
@@ -308,9 +300,6 @@ def show_artist(artist_id):
       upcoming_shows.append(show_info)
     else:
       past_shows.append(show_info)
-  f = open('file.txt','a')
-  f.write(str(type(artist.genres)))
-  f.close()
   data = {
     "id": artist.id,
     "name": artist.name,
@@ -325,17 +314,37 @@ def show_artist(artist_id):
     "image_link": artist.image_link,
     "past_shows": past_shows,
     "upcoming_shows": upcoming_shows,
-    "past_shows_count": artist.past_shows_count,
-    "upcoming_shows_count": artist.upcoming_shows_count,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows)
   }
 
   return render_template('pages/show_artist.html', artist=data)
 
+#  delete artist
+#  ----------------------------------------------------------------
+@app.route('/artists/delete', methods=['POST'])
+def delete_artist():
+  artist_id = request.form.get('artist_id')
+  deleted_artist = Artist.query.get(artist_id)
+  artistName = deleted_artist.name
+  try:
+    db.session.delete(deleted_artist)
+    db.session.commit()
+    flash('Artist ' + artistName + ' was successfully deleted!')
+  except:
+    db.session.rollback()
+    flash('please try again. Venue ' + artistName + ' could not be deleted.')
+  finally:
+    db.session.close()
+  # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
+  # clicking that button delete it from the db then redirect the user to the homepage
+  return redirect(url_for('index'))
 #  Update
 #  ----------------------------------------------------------------
-@app.route('/artists/<int:artist_id>/edit', methods=['GET'])
-def edit_artist(artist_id):
+@app.route('/artists/edit', methods=['GET'])
+def edit_artist():
   form = ArtistForm()
+  artist_id = request.args.get('artist_id')
   artist = Artist.query.get(artist_id)
   artist_info={
     "id": artist.id,
@@ -364,6 +373,8 @@ def edit_artist_submission(artist_id):
   artist.phone = request.form['phone']
   artist.facebook_link = request.form['facebook_link']
   artist.genres = request.form['genres']
+  artist.image_link = request.form['image_link']
+  artist.website = request.form['website']
   try:
     db.session.commit()
     flash("Artist {} is updated successfully".format(artist.name))
@@ -374,8 +385,9 @@ def edit_artist_submission(artist_id):
     db.session.close()
   return redirect(url_for('show_artist', artist_id=artist_id))
 
-@app.route('/venues/<int:venue_id>/edit', methods=['GET'])
-def edit_venue(venue_id):
+@app.route('/venues/edit', methods=['GET'])
+def edit_venue():
+  venue_id = request.args.get('venue_id')
   form = VenueForm()
   venue = Venue.query.get(venue_id)
   venue_info={
@@ -407,6 +419,8 @@ def edit_venue_submission(venue_id):
   venue.phone = request.form['phone']
   venue.facebook_link = request.form['facebook_link']
   venue.genres = request.form['genres']
+  venue.image_link = request.form['image_link']
+  venue.website = request.form['website']
   try:
     db.session.commit()
     flash('Venue ' + request.form['name'] + ' was successfully updated!')
@@ -435,9 +449,6 @@ def create_artist_submission():
   new_artist.city = request.form['city']
   new_artist.state = request.form['state']
   new_artist.genres = request.form['genres']
-  f = open('file.txt','a')
-  f.write(request.form['genres'])
-  f.close()
   new_artist.phone = request.form['phone']
   new_artist.facebook_link = request.form['facebook_link']
   new_artist.image_link = request.form['image_link']
@@ -452,7 +463,7 @@ def create_artist_submission():
     flash('An error occurred. Artist ' + new_artist.name + ' could not be listed.')
   finally:
     db.session.close()
-  return render_template('pages/home.html')
+  return redirect(url_for('index'))
 
 
 #  Shows
@@ -521,7 +532,7 @@ def create_show_submission():
   finally:
     db.session.close()
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
-  return render_template('pages/home.html')
+  return redirect(url_for('index'))
 
 @app.errorhandler(404)
 def not_found_error(error):
